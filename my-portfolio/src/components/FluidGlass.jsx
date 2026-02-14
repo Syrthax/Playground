@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { useRef, useState, useEffect, memo } from 'react';
+import { useRef, useState, useEffect, memo, Suspense } from 'react';
 import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber';
 import {
   useFBO,
@@ -12,6 +12,15 @@ import {
   Text
 } from '@react-three/drei';
 import { easing } from 'maath';
+
+function LoadingFallback() {
+  return (
+    <mesh>
+      <planeGeometry args={[2, 0.5]} />
+      <meshBasicMaterial color="#7c3aed" transparent opacity={0.5} />
+    </mesh>
+  );
+}
 
 export default function FluidGlass({ mode = 'lens', lensProps = {}, barProps = {}, cubeProps = {} }) {
   const Wrapper = mode === 'bar' ? Bar : mode === 'cube' ? Cube : Lens;
@@ -29,20 +38,23 @@ export default function FluidGlass({ mode = 'lens', lensProps = {}, barProps = {
   return (
     <Canvas 
       camera={{ position: [0, 0, 20], fov: 15 }} 
-      gl={{ alpha: false, antialias: true }}
+      gl={{ alpha: false, antialias: true, powerPreference: 'high-performance' }}
       onCreated={({ gl }) => gl.setClearColor(0x0a0a1a, 1)}
+      onError={(e) => console.error('Canvas error:', e)}
     >
-      <ScrollControls damping={0.2} pages={3} distance={0.4}>
-        {mode === 'bar' && <NavItems items={navItems} />}
-        <Wrapper modeProps={modeProps}>
-          <Scroll>
-            <Typography />
-            <ProjectCards />
-          </Scroll>
-          <Scroll html />
-          <Preload />
-        </Wrapper>
-      </ScrollControls>
+      <Suspense fallback={<LoadingFallback />}>
+        <ScrollControls damping={0.2} pages={3} distance={0.4}>
+          {mode === 'bar' && <NavItems items={navItems} />}
+          <Wrapper modeProps={modeProps}>
+            <Scroll>
+              <Typography />
+              <ProjectCards />
+            </Scroll>
+            <Scroll html />
+            <Preload />
+          </Wrapper>
+        </ScrollControls>
+      </Suspense>
     </Canvas>
   );
 }
